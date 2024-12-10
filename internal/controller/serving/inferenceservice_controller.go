@@ -19,6 +19,7 @@ package serving
 import (
 	"context"
 	"errors"
+
 	"github.com/go-logr/logr"
 	kservev1alpha1 "github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
 	kservev1beta1 "github.com/kserve/kserve/pkg/apis/serving/v1beta1"
@@ -111,7 +112,7 @@ func (r *InferenceServiceReconciler) ReconcileServing(ctx context.Context, req c
 	}
 
 	// Check what deployment mode is used by the InferenceService. We have differing reconciliation logic for Kserve and ModelMesh
-	IsvcDeploymentMode, err := utils.GetDeploymentModeForIsvc(ctx, r.Client, isvc)
+	IsvcDeploymentMode, err := utils.GetDeploymentModeForKServeResource(ctx, r.Client, isvc.GetAnnotations())
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -225,7 +226,7 @@ func (r *InferenceServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *InferenceServiceReconciler) onDeletion(ctx context.Context, log logr.Logger, inferenceService *kservev1beta1.InferenceService) error {
 	log.V(1).Info("Running cleanup logic")
 
-	IsvcDeploymentMode, err := utils.GetDeploymentModeForIsvc(ctx, r.Client, inferenceService)
+	IsvcDeploymentMode, err := utils.GetDeploymentModeForKServeResource(ctx, r.Client, inferenceService.GetAnnotations())
 	if err != nil {
 		log.V(1).Error(err, "Could not determine deployment mode for ISVC. Some resources related to the inferenceservice might not be deleted.")
 	}

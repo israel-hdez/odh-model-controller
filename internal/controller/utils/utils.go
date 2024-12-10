@@ -4,18 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	kservev1alpha1 "github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/go-logr/logr"
+	kservev1alpha1 "github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
+
 	kservev1beta1 "github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	"github.com/kuadrant/authorino/pkg/log"
-	"github.com/opendatahub-io/odh-model-controller/internal/controller/constants"
 	v1beta12 "istio.io/api/security/v1beta1"
 	"istio.io/client-go/pkg/apis/security/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,28 +27,30 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/opendatahub-io/odh-model-controller/internal/controller/constants"
 )
 
-type IsvcDeploymentMode string
+type KServeDeploymentMode string
 
 var (
-	Serverless    IsvcDeploymentMode = "Serverless"
-	RawDeployment IsvcDeploymentMode = "RawDeployment"
-	ModelMesh     IsvcDeploymentMode = "ModelMesh"
+	Serverless    KServeDeploymentMode = "Serverless"
+	RawDeployment KServeDeploymentMode = "RawDeployment"
+	ModelMesh     KServeDeploymentMode = "ModelMesh"
 
 	gvResourcesCache map[string]*metav1.APIResourceList
 )
 
 const (
-	inferenceServiceDeploymentModeAnnotation = "serving.kserve.io/deploymentMode"
-	KserveConfigMapName                      = "inferenceservice-config"
-	KServeWithServiceMeshComponent           = "kserve-service-mesh"
+	KServeDeploymentModeAnnotation = "serving.kserve.io/deploymentMode"
+	KserveConfigMapName            = "inferenceservice-config"
+	KServeWithServiceMeshComponent = "kserve-service-mesh"
 )
 
-func GetDeploymentModeForIsvc(ctx context.Context, cli client.Client, isvc *kservev1beta1.InferenceService) (IsvcDeploymentMode, error) {
+func GetDeploymentModeForKServeResource(ctx context.Context, cli client.Client, annotations map[string]string) (KServeDeploymentMode, error) {
 
-	// If ISVC specifically sets deployment mode using an annotation, return bool depending on value
-	value, exists := isvc.Annotations[inferenceServiceDeploymentModeAnnotation]
+	// If explicitly sets deployment mode using an annotation, return bool depending on value
+	value, exists := annotations[KServeDeploymentModeAnnotation]
 	if exists {
 		switch value {
 		case string(ModelMesh):
@@ -58,10 +60,10 @@ func GetDeploymentModeForIsvc(ctx context.Context, cli client.Client, isvc *kser
 		case string(RawDeployment):
 			return RawDeployment, nil
 		default:
-			return "", fmt.Errorf("the deployment mode '%s' of the Inference Service is invalid", value)
+			return "", fmt.Errorf("the deployment mode '%s' of the KServe resource is invalid", value)
 		}
 	} else {
-		// ISVC does not specifically set deployment mode using an annotation, determine the default from configmap
+		// There is no explicit deployment mode using an annotation, determine the default from configmap
 		controllerNs := os.Getenv("POD_NAMESPACE")
 		inferenceServiceConfigMap := &corev1.ConfigMap{}
 		err := cli.Get(ctx, client.ObjectKey{

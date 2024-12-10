@@ -28,6 +28,9 @@ resources:
   kind: InferenceService
   path: github.com/kserve/kserve/pkg/apis/serving/v1beta1
   version: v1beta1
+  webhooks:
+    defaulting: true
+    webhookVersion: v1
 - controller: true
   core: true
   group: core
@@ -55,5 +58,14 @@ resources:
   version: v1
   webhooks:
     validation: true
+    webhookVersion: v1
+- domain: kserve.io
+  external: true
+  group: serving
+  kind: InferenceGraph
+  path: github.com/kserve/kserve/pkg/apis/serving/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
     webhookVersion: v1
 version: "3"
